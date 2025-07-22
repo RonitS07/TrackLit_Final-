@@ -1,0 +1,54 @@
+name: TrackLit
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.1 # Or your specific Dart SDK version
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  lottie: ^2.7.0 
+  logger: ^2.0.2 # Added for better logging as discussed
+
+  # BLE & permissions
+  flutter_reactive_ble: ^5.0.2
+  permission_handler: ^11.3.1
+
+  # Firebase
+  firebase_core: ^3.15.1
+  cloud_firestore: ^5.6.11
+  firebase_auth: ^5.6.2
+  google_sign_in: ^5.4.4
+
+  # Onboarding & UI enhancements
+  smooth_page_indicator: ^1.1.0
+  shared_preferences: ^2.2.0
+  google_fonts: ^6.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+  # App icon generation
+  flutter_launcher_icons: ^0.13.1
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    # IMPORTANT: Ensure these paths match the actual location of your asset files
+    - assets/logos/google_logo.jpg # Corrected path for Google logo
+    - assets/logos/app_icon_latest.jpeg  # Corrected path for app icon
+    - assets/lottie/welcome.json
+    - assets/lottie/track_device.json
+    - assets/lottie/lost_found.json
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/logos/app_icon_latest.jpeg" # Corrected path for launcher icon
