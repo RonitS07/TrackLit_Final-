@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-// IMPORTANT: Ensure this import path matches your firebase_util.dart file location:
 import 'package:TrackLit/firebase/firebase_util.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Import for FirebaseAuthException
-import 'package:logger/logger.dart'; // Import the logger package
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:logger/logger.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -16,7 +15,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
-  final Logger _logger = Logger(); // Initialize logger for this page
+  final Logger _logger = Logger();
 
   @override
   void dispose() {
@@ -36,15 +35,16 @@ class _LoginPageState extends State<LoginPage> {
         _passwordController.text.trim(),
       );
 
-      // Set onboarding completed flag after successful login
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('onboarding_completed', true); // Consistent key
+      await prefs.setBool('onboarding_completed', true);
 
-      // Navigate to home page
-      if (mounted) { // Check if the widget is still in the tree before navigating
+      if (mounted) {
         Navigator.pushReplacementNamed(context, '/');
       }
     } on FirebaseAuthException catch (e) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('onboarding_completed', false);
+
       String message;
       if (e.code == 'user-not-found') {
         message = 'No user found for that email.';
@@ -58,16 +58,19 @@ class _LoginPageState extends State<LoginPage> {
           SnackBar(content: Text(message)),
         );
       }
-      _logger.e("FirebaseAuthException during login: ${e.code}, ${e.message}"); // Log error
+      _logger.e("FirebaseAuthException during login: ${e.code}, ${e.message}");
     } catch (e) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('onboarding_completed', false);
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: ${e.toString()}')),
         );
       }
-      _logger.e("General error during login: $e"); // Log error
+      _logger.e("General error during login: $e");
     } finally {
-      if (mounted) { // Ensure setState is only called if widget is still mounted
+      if (mounted) {
         setState(() {
           _isLoading = false;
         });
@@ -83,30 +86,34 @@ class _LoginPageState extends State<LoginPage> {
     try {
       final UserCredential userCredential = await FirebaseUtil.signInWithGoogle();
 
-      // Set onboarding completed flag after successful Google Sign-In
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('onboarding_completed', true); // Consistent key
+      await prefs.setBool('onboarding_completed', true);
 
-      // Navigate to home page
-      if (mounted) { // Check if the widget is still in the tree before navigating
+      if (mounted) {
         Navigator.pushReplacementNamed(context, '/');
       }
     } on FirebaseAuthException catch (e) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('onboarding_completed', false);
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Google Sign-In Error: ${e.message}')),
         );
       }
-      _logger.e("Google Sign-In FirebaseAuthException: ${e.code}, ${e.message}"); // Log error
+      _logger.e("Google Sign-In FirebaseAuthException: ${e.code}, ${e.message}");
     } catch (e) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('onboarding_completed', false);
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: ${e.toString()}')),
         );
       }
-      _logger.e("General error during Google Sign-In: $e"); // Log error
+      _logger.e("General error during Google Sign-In: $e");
     } finally {
-      if (mounted) { // Ensure setState is only called if widget is still mounted
+      if (mounted) {
         setState(() {
           _isLoading = false;
         });
@@ -117,7 +124,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Already white, matching desired aesthetic
+      backgroundColor: Colors.white,
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(30),
@@ -140,9 +147,9 @@ class _LoginPageState extends State<LoginPage> {
                 keyboardType: TextInputType.emailAddress,
                 decoration: InputDecoration(
                   labelText: 'Email',
-                  labelStyle: const TextStyle(color: Colors.black54), // Matching aesthetic
+                  labelStyle: const TextStyle(color: Colors.black54),
                   filled: true,
-                  fillColor: Colors.grey[200], // Matching aesthetic
+                  fillColor: Colors.grey[200],
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide.none,
@@ -155,9 +162,9 @@ class _LoginPageState extends State<LoginPage> {
                 obscureText: true,
                 decoration: InputDecoration(
                   labelText: 'Password',
-                  labelStyle: const TextStyle(color: Colors.black54), // Matching aesthetic
+                  labelStyle: const TextStyle(color: Colors.black54),
                   filled: true,
-                  fillColor: Colors.grey[200], // Matching aesthetic
+                  fillColor: Colors.grey[200],
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide.none,
@@ -169,8 +176,8 @@ class _LoginPageState extends State<LoginPage> {
                   ? const Center(child: CircularProgressIndicator(color: Colors.black))
                   : ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black, // Matching aesthetic
-                        foregroundColor: Colors.white, // Matching aesthetic
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 15),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -185,16 +192,15 @@ class _LoginPageState extends State<LoginPage> {
               const SizedBox(height: 20),
               OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.black, // Matching aesthetic
-                  side: const BorderSide(color: Colors.black26), // Matching aesthetic
+                  foregroundColor: Colors.black,
+                  side: const BorderSide(color: Colors.black26),
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
                 onPressed: _handleGoogleSignIn,
-                // IMPORTANT: Updated path to match pubspec.yaml
-                icon: Image.asset('assets/logos/google_logo.jpg', height: 24), // Updated path
+                icon: Image.asset('assets/logos/google_logo.jpg', height: 24),
                 label: const Text(
                   "Login with Google",
                   style: TextStyle(fontSize: 16),
@@ -203,12 +209,11 @@ class _LoginPageState extends State<LoginPage> {
               const SizedBox(height: 20),
               TextButton(
                 onPressed: () {
-                  // Using pushReplacementNamed to prevent going back to Login
-                  Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+                  Navigator.pushNamedAndRemoveUntil(context, '/signup', (route) => false);
                 },
                 child: const Text(
                   "Don't have an account? Sign Up",
-                  style: TextStyle(color: Colors.black87), // Matching aesthetic
+                  style: TextStyle(color: Colors.black87),
                 ),
               ),
             ],

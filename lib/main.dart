@@ -1,33 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-// IMPORTANT: Ensure this import path is correct for your app_routes.dart file
+import 'package:workmanager/workmanager.dart';
+import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
+import 'background/background_ble_task.dart';
 import 'package:TrackLit/routes/app_routes.dart';
-import 'package:TrackLit/firebase_options.dart'; // Ensure this file exists and is correctly configured
+import 'package:TrackLit/firebase_options.dart';
+import 'package:TrackLit/splash_screen.dart'; // Ensure SplashScreen is directly imported
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // The SplashScreen will now handle the initial routing logic based on onboarding status and user login.
-  runApp(const MyApp());
+  final flutterReactiveBle = FlutterReactiveBle();
+
+  await Workmanager().initialize(
+    callbackDispatcher,
+    isInDebugMode: false,
+  );
+
+  await Workmanager().registerPeriodicTask(
+    "bleScanTask",
+    "scanAndLogBLE",
+    frequency: const Duration(minutes: 15),
+    constraints: Constraints(networkType: NetworkType.connected),
+  );
+
+  runApp(MyApp(ble: flutterReactiveBle));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final FlutterReactiveBle ble;
+  const MyApp({super.key, required this.ble});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'TrackLit', // Your app's title
+      title: 'TrackLit',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(useMaterial3: true),
-      // Set the initial route to SplashScreen.
-      // SplashScreen will then determine whether to go to Onboarding, Login, or Home.
-      initialRoute: AppRoutes.splash,
-      // This includes all your defined routes, including '/splash'
-      routes: {
-        ...AppRoutes.routes,
-      },
+      home: const SplashScreen(), // ✅ Always start from SplashScreen
+      routes: AppRoutes.routes, // ✅ No conflict with '/'
     );
   }
 }

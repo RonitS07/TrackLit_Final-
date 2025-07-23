@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:TrackLit/firebase/firebase_util.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:logger/logger.dart';
+import 'package:TrackLit/screens/home_page.dart'; // Import HomePage
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -25,99 +25,73 @@ class _SignupPageState extends State<SignupPage> {
     _confirmPasswordController.dispose();
     super.dispose();
   }
-Future<void> _handleSignup() async {
-  setState(() {
-    _isLoading = true;
-  });
 
-  try {
-    final UserCredential userCredential = await FirebaseUtil.signUp(
-      _emailController.text.trim(),
-      _passwordController.text.trim(),
-    );
-
-    // Set onboarding completed flag after successful signup
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('onboarding_completed', true); // Ensure consistency
-
-    // Navigate to home page
-    if (mounted) {
-      Navigator.pushReplacementNamed(context, '/');
-    }
-  } on FirebaseAuthException catch (e) {
-    String message;
-    if (e.code == 'email-already-in-use') {
-      message = 'This email is already in use.';
-    } else if (e.code == 'weak-password') {
-      message = 'The password provided is too weak.';
-    } else {
-      message = e.message ?? 'An unknown error occurred during signup.';
-    }
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
-    }
-  } catch (e) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
-    }
-  } finally {
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-}
-
-  Future<void> _handleGoogleSignIn() async {
-    setState(() {
-      _isLoading = true;
-    });
+  Future<void> _handleSignup() async {
+    setState(() => _isLoading = true);
 
     try {
-      final UserCredential userCredential = await FirebaseUtil.signInWithGoogle();
+      final userCredential = await FirebaseUtil.signUp(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
+      );
 
-      if (userCredential.user != null) {
-        if (userCredential.additionalUserInfo?.isNewUser == true) {
-          await FirebaseUtil.storeUserData(userCredential.user!.uid, {
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomePage()),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      String message = switch (e.code) {
+        'email-already-in-use' => 'This email is already in use.',
+        'weak-password' => 'The password provided is too weak.',
+        _ => e.message ?? 'An unknown error occurred during signup.'
+      };
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final userCredential = await FirebaseUtil.signInWithGoogle();
+
+      if (userCredential.user != null && (userCredential.additionalUserInfo?.isNewUser ?? false)) {
+        await FirebaseUtil.storeUserData(
+          userCredential.user!.uid,
+          {
             'email': userCredential.user!.email,
             'uid': userCredential.user!.uid,
             'displayName': userCredential.user!.displayName,
             'photoURL': userCredential.user!.photoURL,
-          });
-        }
+          },
+        );
       }
 
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('onboarding_completed', true);
-
       if (mounted) {
-        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const HomePage()),
+          (route) => false,
+        );
       }
     } on FirebaseAuthException catch (e) {
+      _logger.e("Google Sign-In error: ${e.code} / ${e.message}");
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Google Sign-In Error: ${e.message}')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Google Sign-In Error: ${e.message}')));
       }
-      _logger.e("Google Sign-In FirebaseAuthException: ${e.code}, ${e.message}");
     } catch (e) {
+      _logger.e("Google Sign-In general error: $e");
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
-      _logger.e("General error during Google Sign-In: $e");
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -135,11 +109,7 @@ Future<void> _handleSignup() async {
               const Text(
                 "Sign Up",
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 40,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
+                style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.black),
               ),
               const SizedBox(height: 50),
               TextField(
@@ -150,10 +120,7 @@ Future<void> _handleSignup() async {
                   labelStyle: const TextStyle(color: Colors.black54),
                   filled: true,
                   fillColor: Colors.grey[200],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide.none,
-                  ),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
                 ),
               ),
               const SizedBox(height: 20),
@@ -165,10 +132,7 @@ Future<void> _handleSignup() async {
                   labelStyle: const TextStyle(color: Colors.black54),
                   filled: true,
                   fillColor: Colors.grey[200],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide.none,
-                  ),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
                 ),
               ),
               const SizedBox(height: 20),
@@ -180,10 +144,7 @@ Future<void> _handleSignup() async {
                   labelStyle: const TextStyle(color: Colors.black54),
                   filled: true,
                   fillColor: Colors.grey[200],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide.none,
-                  ),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
                 ),
               ),
               const SizedBox(height: 30),
@@ -194,9 +155,7 @@ Future<void> _handleSignup() async {
                         backgroundColor: Colors.black,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                       onPressed: _handleSignup,
                       child: const Text("Sign Up", style: TextStyle(fontSize: 18)),
@@ -207,9 +166,7 @@ Future<void> _handleSignup() async {
                   foregroundColor: Colors.black,
                   side: const BorderSide(color: Colors.black26),
                   padding: const EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
                 onPressed: _handleGoogleSignIn,
                 icon: Image.asset('assets/logos/google_logo.jpg', height: 24),
@@ -220,10 +177,7 @@ Future<void> _handleSignup() async {
                 onPressed: () {
                   Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
                 },
-                child: const Text(
-                  "Already have an account? Login",
-                  style: TextStyle(color: Colors.black87),
-                ),
+                child: const Text("Already have an account? Login", style: TextStyle(color: Colors.black87)),
               ),
             ],
           ),

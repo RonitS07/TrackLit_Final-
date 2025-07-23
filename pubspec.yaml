@@ -13,6 +13,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   lottie: ^2.7.0 
   logger: ^2.0.2 # Added for better logging as discussed
+  workmanager: ^0.7.0 #For background
 
   # BLE & permissions
   flutter_reactive_ble: ^5.0.2
@@ -23,6 +24,9 @@ dependencies:
   cloud_firestore: ^5.6.11
   firebase_auth: ^5.6.2
   google_sign_in: ^5.4.4
+
+  #GeoLocator
+  geolocator: ^11.0.0
 
   # Onboarding & UI enhancements
   smooth_page_indicator: ^1.1.0

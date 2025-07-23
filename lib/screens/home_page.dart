@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:TrackLit/firebase/firebase_util.dart';
-// IMPORTANT: Ensure this import is correct for your splash_screen.dart file location:
-import 'package:TrackLit/splash_screen.dart'; // Import SplashScreen
+import 'package:TrackLit/splash_screen.dart';
+import 'package:TrackLit/routes/app_routes.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -17,22 +17,16 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _handleLogout() async {
     try {
-      await FirebaseUtil.signOut(); // Perform Firebase logout
+      await FirebaseUtil.signOut();
 
-      // Reset onboarding_completed flag in SharedPreferences upon logout.
-      // This ensures that on the next app launch/re-evaluation via SplashScreen,
-      // the onboarding flow can be triggered again.
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('onboarding_completed', false); // Set to false to allow onboarding to show again
+      await prefs.setBool('onboarding_completed', false);
 
       if (mounted) {
-        // Navigate to the SplashScreen, removing all previous routes from the stack.
-        // SplashScreen will then re-evaluate the onboarding_completed flag
-        // and guide the user to either Onboarding or Login/Signup.
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (context) => const SplashScreen()), // Go to SplashScreen
-          (Route<dynamic> route) => false, // Clear all previous routes
+          MaterialPageRoute(builder: (_) => const SplashScreen()),
+          (route) => false,
         );
       }
     } catch (e) {
@@ -53,11 +47,17 @@ class _HomePageState extends State<HomePage> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _handleLogout,
-            tooltip: 'Logout',
+            icon: const Icon(Icons.person),
+            tooltip: 'Profile',
+            onPressed: () {
+              Navigator.pushNamed(context, AppRoutes.profile);
+            },
           ),
-          // The _resetOnboardingForDebug button/method has been removed.
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Logout',
+            onPressed: _handleLogout,
+          ),
         ],
       ),
       body: Center(
@@ -72,7 +72,7 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
-                Navigator.pushNamed(context, '/ble');
+                Navigator.pushNamed(context, AppRoutes.bleScanner);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.black,
