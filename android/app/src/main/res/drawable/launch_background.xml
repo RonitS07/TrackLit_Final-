@@ -1,16 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Set background to black -->
-    <item android:drawable="@android:color/black" />
+    <!-- Use your cleaned background image -->
+    <item android:drawable="@drawable/background" />
     
-    <!-- Increase icon size -->
+    <!-- Optional centered logo/icon -->
     <item>
         <bitmap
             android:gravity="center"
-            android:src="@"
-            android:tileMode="disabled"
-            android:scaleType="fitXY"
-            android:width="300dp"
-            android:height="300dp" />
+            android:src="@drawable/launch_background_image"
+            android:scaleType="fitCenter" />
     </item>
 </layer-list>
