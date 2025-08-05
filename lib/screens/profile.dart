@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -17,6 +18,7 @@ class _ProfilePageState extends State<ProfilePage> {
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   File? _profileImage;
+  String? _photoUrl;
   bool _isLoading = true;
   bool _isEditing = false;
 
@@ -38,21 +40,45 @@ class _ProfilePageState extends State<ProfilePage> {
       final data = doc.data()!;
       _nameController.text = data['name'] ?? '';
       _phoneController.text = data['phone'] ?? '';
+      _photoUrl = data['photoURL'];
     }
 
     setState(() {
       _isLoading = false;
     });
   }
+Future<void> _pickImage() async {
+  final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+  if (picked != null) {
+    try {
+      final file = File(picked.path);
+      setState(() => _profileImage = file);
 
-  Future<void> _pickImage() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() {
-        _profileImage = File(picked.path);
-      });
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('profile_images')
+          .child('${user!.uid}.jpg');
+
+      // Upload the file with overwrite
+      final uploadTask = storageRef.putFile(file);
+      final snapshot = await uploadTask;
+
+      final url = await snapshot.ref.getDownloadURL();
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user!.uid)
+          .set({'photoURL': url}, SetOptions(merge: true));
+
+      setState(() => _photoUrl = url);
+    } catch (e) {
+      debugPrint("Image upload failed: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Image upload failed. Please try again.')),
+      );
     }
   }
+}
 
   Future<void> _saveProfile() async {
     if (user == null) return;
@@ -71,7 +97,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _logout() async {
     await FirebaseAuth.instance.signOut();
     if (context.mounted) {
-      Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
+      Navigator.pushNamedAndRemoveUntil(context, '/onboarding', (_) => false);
     }
   }
 
@@ -125,8 +151,11 @@ class _ProfilePageState extends State<ProfilePage> {
               child: CircleAvatar(
                 radius: 50,
                 backgroundColor: Colors.black12,
-                backgroundImage: _profileImage != null ? FileImage(_profileImage!) : null,
-                child: _profileImage == null
+                backgroundImage: _profileImage != null
+                    ? FileImage(_profileImage!)
+                    : (_photoUrl != null ? NetworkImage(_photoUrl!) : null)
+                        as ImageProvider?,
+                child: _profileImage == null && _photoUrl == null
                     ? const Icon(Icons.camera_alt, size: 30, color: Colors.black54)
                     : null,
               ),
@@ -136,7 +165,8 @@ class _ProfilePageState extends State<ProfilePage> {
             const SizedBox(height: 12),
             _buildField("Name", _nameController, enabled: _isEditing),
             const SizedBox(height: 12),
-            _buildField("Phone", _phoneController, keyboardType: TextInputType.phone, enabled: _isEditing),
+            _buildField("Phone", _phoneController,
+                keyboardType: TextInputType.phone, enabled: _isEditing),
             const SizedBox(height: 20),
             ElevatedButton.icon(
               onPressed: _logout,
@@ -177,14 +207,15 @@ class _ProfilePageState extends State<ProfilePage> {
       keyboardType: keyboardType,
       enabled: enabled,
       style: TextStyle(
-        color: enabled ? Colors.black54 : Colors.black, // 🔁 Swapped here
+        color: enabled ? Colors.black54 : Colors.black,
       ),
       decoration: InputDecoration(
         labelText: label,
         filled: greyed || !enabled,
         fillColor: Colors.grey.shade200,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     );
   }

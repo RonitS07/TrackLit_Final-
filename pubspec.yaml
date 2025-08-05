@@ -14,6 +14,7 @@ dependencies:
   lottie: ^2.7.0
   logger: ^2.0.2
   workmanager: ^0.7.0
+  firebase_storage: ^12.4.9
 
   # BLE & permissions
   flutter_reactive_ble: ^5.0.2
@@ -35,6 +36,10 @@ dependencies:
 
   # Profile Image Picker
   image_picker: ^1.0.5
+
+  # ✅ Google Maps and formatting (add these)
+  google_maps_flutter: ^2.6.0
+  intl: ^0.18.0
 
 dev_dependencies:
   flutter_test:
