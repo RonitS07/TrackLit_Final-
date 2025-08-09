@@ -150,18 +150,18 @@ class HomeScreenContent extends StatelessWidget {
                   final name = device['name'] ?? 'Unnamed';
                   final mac = device['mac_id'] ?? '';
 
-                  return FutureBuilder<QuerySnapshot>(
-                    future: FirebaseFirestore.instance
+                  // 🔹 Use StreamBuilder for logs so UI updates instantly
+                  return StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
                         .collection('device_logs')
                         .where('mac_id', isEqualTo: mac)
                         .orderBy('timestamp', descending: true)
                         .limit(1)
-                        .get(),
+                        .snapshots(),
                     builder: (ctx2, snapLog) {
                       Map<String, dynamic>? log;
                       if (snapLog.hasData && snapLog.data!.docs.isNotEmpty) {
-                        log = snapLog.data!.docs.first.data()
-                            as Map<String, dynamic>;
+                        log = snapLog.data!.docs.first.data() as Map<String, dynamic>;
                       }
 
                       final timestamp = log?['timestamp']?.toDate();
@@ -179,9 +179,22 @@ class HomeScreenContent extends StatelessWidget {
                         tileColor: Colors.white,
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 12),
-                        title: Text(name,
-                            style: const TextStyle(
-                                fontSize: 17, fontWeight: FontWeight.w600)),
+                        title: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(name,
+                                style: const TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w600)),
+                            if (isLive)
+                              const Text(
+                                "🟢 Live",
+                                style: TextStyle(
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                          ],
+                        ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -192,25 +205,82 @@ class HomeScreenContent extends StatelessWidget {
                             if (battery != null) Text('Battery: $battery%'),
                           ],
                         ),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: lat != null && lng != null && timestamp != null
-                            ? () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => DeviceDetailPage(
-                                      deviceName: name,
-                                      lat: lat,
-                                      lng: lng,
-                                      battery: battery,
-                                      seenAt: timestamp,
-                                      isLive: isLive,
+                        trailing: PopupMenuButton<String>(
+                          onSelected: (value) async {
+                            if (value == 'unlink') {
+                              final confirmed = await showDialog<bool>(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  title: const Text('Unlink Device'),
+                                  content: Text('Are you sure you want to unlink "$name"?'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx, false),
+                                      child: const Text('Cancel'),
                                     ),
-                                  ),
-                                )
-                            : () => ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text(
-                                        'No location data for this device'))),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx, true),
+                                      child: const Text('Unlink'),
+                                    ),
+                                  ],
+                                ),
+                              );
+
+                              if (confirmed == true) {
+                                try {
+                                  // Remove the linked device doc under user's linked_devices
+                                  await FirebaseFirestore.instance
+                                      .collection('users')
+                                      .doc(uid)
+                                      .collection('linked_devices')
+                                      .doc(deviceId)
+                                      .delete();
+
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Device "$name" unlinked successfully')),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Failed to unlink device: $e')),
+                                    );
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          itemBuilder: (ctx) => [
+                            const PopupMenuItem(
+                              value: 'unlink',
+                              child: Text('Unlink Device'),
+                            ),
+                          ],
+                          icon: const Icon(Icons.more_vert),
+                        ),
+                        onTap: () {
+                          if (lat != null && lng != null) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => DeviceDetailPage(
+                                  deviceName: name,
+                                  lat: lat.toDouble(),
+                                  lng: lng.toDouble(),
+                                  battery: battery,
+                                  seenAt: timestamp ?? DateTime.now(),
+                                  isLive: isLive,
+                                ),
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('No location data for this device')),
+                            );
+                          }
+                        },
                       );
                     },
                   );

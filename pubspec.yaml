@@ -15,6 +15,7 @@ dependencies:
   logger: ^2.0.2
   workmanager: ^0.7.0
   firebase_storage: ^12.4.9
+  url_launcher: ^6.3.0
 
   # BLE & permissions
   flutter_reactive_ble: ^5.0.2

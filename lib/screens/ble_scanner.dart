@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -20,6 +21,7 @@ class _BleScannerPageState extends State<BleScannerPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchText = "";
   final Map<String, Map<String, dynamic>> _knownDevices = {}; // mac -> device data
+  StreamSubscription<DiscoveredDevice>? _scanSubscription;
 
   @override
   void initState() {
@@ -40,7 +42,7 @@ class _BleScannerPageState extends State<BleScannerPage> {
       final data = doc.data();
       final mac = data['mac_id'];
       if (mac != null) {
-        _knownDevices[mac] = {
+        _knownDevices[mac.toLowerCase()] = {
           ...data,
           'docId': doc.id,
         };
@@ -49,13 +51,22 @@ class _BleScannerPageState extends State<BleScannerPage> {
   }
 
   Future<void> _requestPermissionsAndStartScan() async {
-    await [
+    final statuses = await [
       Permission.bluetoothScan,
       Permission.bluetoothConnect,
       Permission.location,
     ].request();
 
-    flutterReactiveBle
+    if (statuses.values.any((status) => !status.isGranted)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please grant all permissions to scan devices.')),
+        );
+      }
+      return;
+    }
+
+    _scanSubscription = flutterReactiveBle
         .scanForDevices(withServices: [], scanMode: ScanMode.lowLatency)
         .listen((device) {
       setState(() {
@@ -78,7 +89,7 @@ class _BleScannerPageState extends State<BleScannerPage> {
   }
 
   void _promptLinking(DiscoveredDevice device) {
-    final info = _knownDevices[device.id];
+    final info = _knownDevices[device.id.toLowerCase()];
     if (info == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('This device is not registered.')),
@@ -145,6 +156,7 @@ class _BleScannerPageState extends State<BleScannerPage> {
 
   @override
   void dispose() {
+    _scanSubscription?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -180,7 +192,7 @@ class _BleScannerPageState extends State<BleScannerPage> {
                     itemCount: _filteredDevices.length,
                     itemBuilder: (context, index) {
                       final d = _filteredDevices[index];
-                      final info = _knownDevices[d.id];
+                      final info = _knownDevices[d.id.toLowerCase()];
                       final name = info?['name'] ?? (d.name.isNotEmpty ? d.name : 'Unnamed');
                       return ListTile(
                         leading: const Icon(Icons.bluetooth),

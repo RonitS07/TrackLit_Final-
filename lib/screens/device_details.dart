@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DeviceDetailPage extends StatelessWidget {
   final String deviceName;
@@ -20,6 +21,20 @@ class DeviceDetailPage extends StatelessWidget {
     required this.isLive,
   });
 
+  IconData _getBatteryIcon(int battery) {
+    if (battery >= 80) return Icons.battery_full;
+    if (battery >= 50) return Icons.battery_5_bar;
+    if (battery >= 20) return Icons.battery_2_bar;
+    return Icons.battery_alert;
+  }
+
+  Future<void> _openInGoogleMaps() async {
+    final url = 'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final seenLabel = isLive ? 'Live Now' : 'Last Seen';
@@ -31,6 +46,7 @@ class DeviceDetailPage extends StatelessWidget {
       infoWindow: InfoWindow(
         title: deviceName,
         snippet: '$seenLabel • $formattedTime',
+        onTap: _openInGoogleMaps,
       ),
     );
 
@@ -47,14 +63,37 @@ class DeviceDetailPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  seenLabel,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: isLive ? Colors.green : Colors.grey,
+                if (isLive)
+                  Row(
+                    children: [
+                      Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          shape: BoxShape.circle,
+                        ),
+                        margin: const EdgeInsets.only(right: 6),
+                      ),
+                      Text(
+                        seenLabel,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  Text(
+                    seenLabel,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey,
+                    ),
                   ),
-                ),
                 const SizedBox(height: 6),
                 Text(
                   formattedTime,
@@ -64,11 +103,13 @@ class DeviceDetailPage extends StatelessWidget {
                 if (battery != null)
                   Row(
                     children: [
-                      const Icon(Icons.battery_full, size: 20),
+                      Icon(_getBatteryIcon(battery!), size: 20),
                       const SizedBox(width: 8),
                       Text('Battery: $battery%'),
                     ],
-                  ),
+                  )
+                else
+                  const Text('Battery data unavailable'),
               ],
             ),
           ),
@@ -80,7 +121,7 @@ class DeviceDetailPage extends StatelessWidget {
                 zoom: 15,
               ),
               markers: {marker},
-              myLocationButtonEnabled: false,
+              myLocationButtonEnabled: true,
               zoomControlsEnabled: true,
             ),
           ),
